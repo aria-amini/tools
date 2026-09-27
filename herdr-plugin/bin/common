@@ -1,0 +1,35 @@
+# Shared jj workspace creation helpers; sourced by bin/menu and bin/new.
+
+# Print the first resolvable base revset for a fresh workspace.
+resolve_trunk() {
+    for rev in 'trunk()' 'main@origin' 'main' 'master@origin' 'master'; do
+        if jj log --no-graph -r "$rev" -T "" >/dev/null 2>&1; then
+            printf '%s' "$rev"
+            return 0
+        fi
+    done
+    # Repos without any trunk bookmark (fresh, remote-less): start at root.
+    if jj log --no-graph -r 'root()' -T "" >/dev/null 2>&1; then
+        printf '%s' 'root()'
+        return 0
+    fi
+    return 1
+}
+
+# Print a human-readable bookmark name for a revset from resolve_trunk.
+trunk_name_for() {
+    case $1 in
+        'trunk()')
+            jj log --no-graph -r 'trunk()' -T 'bookmarks' 2>/dev/null | awk 'NR==1{print $1}'
+            ;;
+        'root()')
+            printf '%s' root
+            ;;
+        *@origin)
+            printf '%s' "${1%%@*}"
+            ;;
+        *)
+            printf '%s' "$1"
+            ;;
+    esac
+}

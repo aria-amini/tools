@@ -1,0 +1,28 @@
+[project]
+name = "herdr-jj"
+version = "0.8.0"
+description = "herdr integration for jw-managed jj workspaces: open/close, picker, wizard, plugin commands"
+requires-python = ">=3.11"
+dependencies = [
+    "textual>=1,<9",
+]
+
+[project.scripts]
+herdr-jj = "herdr_jj.main:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["e2e: end-to-end tests using real jj and fake herdr/fzf binaries"]
+
+[tool.ruff]
+target-version = "py311"
+
+[build-system]
+requires = ["uv_build>=0.9"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "herdr_jj"

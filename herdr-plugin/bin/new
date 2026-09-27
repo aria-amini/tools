@@ -1,0 +1,72 @@
+#!/bin/sh
+# New jj workspace: pick repo (when outside one), base, and name; herdr-jj
+# new applies the default layout from the repo's .herdr.toml.
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+
+set -u
+
+abort() { exit 0; }
+
+entries=$(mktemp)
+branches=$(mktemp)
+trap 'rm -f "$entries" "$branches"' EXIT
+
+# The action stashes the focused pane's cwd; panes get no context env.
+state_dir=${HERDR_PLUGIN_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/herdr/plugins/aamini.jj}
+context_cwd=$(jq -r '.cwd // empty' "$state_dir/picker-context.json" 2>/dev/null)
+context_cwd=${context_cwd:-$PWD}
+dir=$(cd "$context_cwd" 2>/dev/null && jj root 2>/dev/null) || true
+
+if [ -n "$dir" ]; then
+    cd "$dir" || abort
+else
+    zoxide query -l 2>/dev/null | while IFS= read -r d; do
+        [ -d "$d/.jj" ] || continue
+        cd "$d" 2>/dev/null && pwd
+    done > "$entries"
+    [ -s "$entries" ] || abort
+    dir=$(gum filter --placeholder "project…" < "$entries") || abort
+    cd "$dir" || abort
+fi
+
+. "$(dirname "$0")/common"
+
+trunk_rev=$(resolve_trunk) || abort
+trunk_name=$(trunk_name_for "$trunk_rev")
+[ -n "$trunk_name" ] || trunk_name=trunk
+
+cur_bm=$(jj log --no-graph -r @ -T 'bookmarks' 2>/dev/null | awk 'NR==1{print $1}')
+
+printf '%s\n' "$(gum style --bold trunk) ($trunk_name)" > "$branches"
+if [ -n "$cur_bm" ] && [ "$cur_bm" != "$trunk_name" ]; then
+    printf '%s\n' "$(gum style --bold --foreground 4 "$cur_bm") (current)" >> "$branches"
+fi
+jj bookmark list 2>/dev/null | sed -n 's/^\([^ :][^:]*\):.*/\1/p' | while IFS= read -r b; do
+    [ "$b" = "$trunk_name" ] && continue
+    [ "$b" = "$cur_bm" ] && continue
+    printf '%s\n' "$b"
+done >> "$branches"
+
+sel=$(gum filter --placeholder "base branch…" < "$branches") || abort
+clean=$(printf '%s' "$sel" | sed 's/\x1b\[[0-9;]*m//g')
+case $clean in
+    'trunk '?*)
+        rev=$trunk_rev
+        # A trunk-named workspace would collide with the trunk bookmark.
+        default_name=
+        ;;
+    *)
+        clean=${clean%\ (current)}
+        rev=$clean
+        if ! jj log --no-graph -r "$rev" -T "" >/dev/null 2>&1; then
+            rev="$clean@origin"
+        fi
+        default_name=$clean
+        ;;
+esac
+
+name=$(gum input --placeholder "workspace name" --value "$default_name") || abort
+name=$(printf '%s' "$name" | tr -c 'A-Za-z0-9._-' '-' | sed 's/-\{2,\}/-/g; s/^-\|-$//')
+[ -n "$name" ] || abort
+
+exec herdr-jj new "$name" --at "$rev" --project "$dir"

@@ -1,0 +1,72 @@
+id = "aamini.jj"
+name = "jj workspaces"
+version = "0.8.0"
+min_herdr_version = "0.8.2"
+description = "jw-backed jj workspaces: create, remove, pick, sidebar status."
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "new"
+title = "New jj workspace"
+contexts = ["workspace", "global"]
+command = ["./bin/herdr-jj", "new-action"]
+
+[[actions]]
+id = "remove"
+title = "Remove jj workspace"
+contexts = ["workspace"]
+command = ["./bin/herdr-jj", "remove", "--current"]
+
+[[actions]]
+id = "pick"
+title = "Switch jj workspace"
+contexts = ["workspace", "global"]
+command = ["./bin/herdr-jj", "pick"]
+
+[[actions]]
+id = "menu"
+title = "Workspace dashboard"
+contexts = ["workspace", "global"]
+command = ["./bin/herdr-jj", "menu"]
+
+[[panes]]
+id = "picker"
+title = "jj workspaces"
+placement = "popup"
+command = ["./bin/herdr-jj", "picker"]
+
+[[panes]]
+id = "menu"
+title = "jj workspaces"
+placement = "popup"
+width = "90%"
+height = "90%"
+command = ["./bin/herdr-jj", "dashboard"]
+
+[[panes]]
+id = "new"
+title = "jj workspaces"
+placement = "popup"
+command = ["./bin/new"]
+
+[[panes]]
+id = "hunk"
+title = "hunk diff"
+placement = "popup"
+command = ["./bin/herdr-jj", "hunk-pane"]
+
+[[events]]
+on = "workspace.created"
+command = ["./bin/herdr-jj", "reporter", "ensure"]
+
+[[events]]
+on = "workspace.created"
+command = ["./bin/herdr-jj", "nest"]
+
+[[events]]
+on = "worktree.created"
+command = ["./bin/herdr-jj", "adopt"]
+
+[[events]]
+on = "workspace.closed"
+command = ["./bin/herdr-jj", "reporter", "refresh-once"]

@@ -1,0 +1,4 @@
+#!/bin/sh
+# herdr spawns plugin commands with a minimal PATH; restore the user tools.
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+exec herdr-jj "$@"
