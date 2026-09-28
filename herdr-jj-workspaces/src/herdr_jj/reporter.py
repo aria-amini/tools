@@ -22,14 +22,14 @@ from pathlib import Path
 from . import state
 from .lib.herdr import HerdrError, herdr
 from .lib.jj import JjError
-from .lib.sidebar import sidebar_token
+from .lib.sidebar import sidebar_tokens
 
 Spawner = Callable[[list[str], Path], int]
 Clock = Callable[[], float]
 Sleeper = Callable[[float], None]
+TokenFn = Callable[[dict], dict[str, str]]
 
 SOURCE = "aamini.jj"
-TOKEN = "jj_status"
 REPORT_TTL_MS = 90000
 FOCUSED_INTERVAL = 5.0
 BACKGROUND_INTERVAL = 30.0
@@ -93,8 +93,8 @@ def ensure(
 @dataclass
 class Report:
     workspace_id: str
-    token: str
-    seq: int
+    tokens: dict[str, str]
+    cleared: tuple[str, ...] = ()
 
 
 def workspace_cwds(herdr_fn: Callable[..., dict] = herdr) -> dict[str, str]:
@@ -125,45 +125,50 @@ def attach_cwds(workspaces: list[dict], cwds: dict[str, str]) -> None:
             ws["cwd"] = cwd
 
 
+def default_token_fn(ws: dict) -> dict[str, str]:
+    return sidebar_tokens(Path(ws["cwd"]))
+
+
 def compute_reports(
     workspaces: list[dict],
     cache: dict,
-    token_fn: Callable[[Path], str] = sidebar_token,
+    token_fn: TokenFn = default_token_fn,
 ) -> list[Report]:
-    """Diff workspace tokens against cache; return what must be reported."""
+    """Build a report per workspace; the TTL acts as a lease, so every due
+    poll republishes even unchanged tokens."""
     reports = []
     for ws in workspaces:
         cwd = ws.get("cwd")
         if not cwd:
             continue
         try:
-            token = token_fn(Path(cwd))
+            tokens = dict(token_fn(ws))
         except (JjError, OSError):
             continue
-        entry = cache.get(ws["workspace_id"])
-        if entry is not None and entry["token"] == token:
-            continue
-        seq = entry["seq"] + 1 if entry is not None else 1
-        cache[ws["workspace_id"]] = {"token": token, "seq": seq}
-        reports.append(Report(ws["workspace_id"], token, seq))
+        previous = cache.get(ws["workspace_id"], {})
+        cleared = tuple(sorted(set(previous) - set(tokens)))
+        cache[ws["workspace_id"]] = tokens
+        reports.append(Report(ws["workspace_id"], tokens, cleared))
     return reports
 
 
 def publish(herdr_fn: Callable[..., dict], reports: list[Report]) -> None:
     for report in reports:
-        herdr_fn(
+        args = [
             "workspace",
             "report-metadata",
             report.workspace_id,
             "--source",
             SOURCE,
-            "--token",
-            f"{TOKEN}={report.token}",
-            "--seq",
-            str(report.seq),
-            "--ttl-ms",
-            str(REPORT_TTL_MS),
-        )
+        ]
+        for name, value in report.tokens.items():
+            args += ["--token", f"{name}={value}"]
+        for name in report.cleared:
+            args += ["--clear-token", name]
+        # No --seq: a restarted daemon would resend seq 1, which the server
+        # drops as stale. Synchronous CLI publishing needs no ordering guard.
+        args += ["--ttl-ms", str(REPORT_TTL_MS)]
+        herdr_fn(*args)
 
 
 class SocketEvents:
@@ -216,7 +221,7 @@ def run_loop(
     clock: Clock = time.monotonic,
     sleep: Sleeper = time.sleep,
     herdr_fn: Callable[..., dict] = herdr,
-    token_fn: Callable[[Path], str] = sidebar_token,
+    token_fn: TokenFn = default_token_fn,
 ) -> int:
     env = os.environ if env is None else env
     socket_path = env.get("HERDR_SOCKET_PATH", "")
@@ -285,7 +290,7 @@ def run_loop(
 def refresh_once(
     env: Mapping[str, str] | None = None,
     herdr_fn: Callable[..., dict] = herdr,
-    token_fn: Callable[[Path], str] = sidebar_token,
+    token_fn: TokenFn = default_token_fn,
 ) -> int:
     env = os.environ if env is None else env
     workspaces = herdr_fn("workspace", "list").get("workspaces", [])

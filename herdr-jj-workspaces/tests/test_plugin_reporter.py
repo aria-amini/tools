@@ -187,37 +187,47 @@ class TestWorkspaceCwds:
 
 
 def token_for(mapping):
-    def token_fn(cwd):
-        value = mapping[str(cwd)]
+    def token_fn(ws):
+        value = mapping[ws["cwd"]]
         if isinstance(value, Exception):
             raise value
-        return value
+        return {"jj_status": value}
 
     return token_fn
 
 
 class TestComputeReports:
-    def test_reports_new_and_changed_tokens(self):
+    def test_reports_every_poll_to_refresh_the_ttl_lease(self):
         cache = {}
         token_fn = token_for({"/a": "abc ●", "/b": "def ✓"})
 
         reports = reporter_module.compute_reports(WORKSPACES, cache, token_fn)
-        assert [(r.workspace_id, r.token, r.seq) for r in reports] == [
-            ("w1", "abc ●", 1),
-            ("w2", "def ✓", 1),
+        assert [(r.workspace_id, r.tokens["jj_status"]) for r in reports] == [
+            ("w1", "abc ●"),
+            ("w2", "def ✓"),
         ]
 
         again = reporter_module.compute_reports(WORKSPACES, cache, token_fn)
-        assert again == []
+        assert [(r.workspace_id, r.tokens["jj_status"]) for r in again] == [
+            ("w1", "abc ●"),
+            ("w2", "def ✓"),
+        ]
 
-    def test_seq_is_monotonic_per_workspace(self):
+    def test_vanished_tokens_are_cleared(self):
         cache = {}
         token_fn = token_for({"/a": "abc ●", "/b": "def ✓"})
         reporter_module.compute_reports(WORKSPACES, cache, token_fn)
 
-        token_fn = token_for({"/a": "abc ✓", "/b": "def ✓"})
-        reports = reporter_module.compute_reports(WORKSPACES, cache, token_fn)
-        assert [(r.workspace_id, r.seq) for r in reports] == [("w1", 2)]
+        def shrunk(ws):
+            return {}
+
+        reports = reporter_module.compute_reports(
+            [WORKSPACES[0]], cache, token_fn=shrunk
+        )
+        assert len(reports) == 1
+        assert reports[0].workspace_id == "w1"
+        assert reports[0].cleared == ("jj_status",)
+        assert reports[0].tokens == {}
 
     def test_skips_non_jj_workspaces(self):
         cache = {}
@@ -243,7 +253,10 @@ class TestPublish:
             calls.append(args)
             return {}
 
-        reporter_module.publish(fake_herdr, [reporter_module.Report("w1", "abc ●", 3)])
+        reporter_module.publish(
+            fake_herdr,
+            [reporter_module.Report("w1", {"jj_status": "abc ●"})],
+        )
         assert calls == [
             (
                 "workspace",
@@ -253,12 +266,41 @@ class TestPublish:
                 "aamini.jj",
                 "--token",
                 "jj_status=abc ●",
-                "--seq",
-                "3",
                 "--ttl-ms",
                 "90000",
             )
         ]
+
+    def test_clears_vanished_tokens(self):
+        calls = []
+
+        def fake_herdr(*args):
+            calls.append(args)
+            return {}
+
+        reporter_module.publish(
+            fake_herdr,
+            [
+                reporter_module.Report(
+                    "w1", {"added": "+3"}, cleared=("jj_status", "removed")
+                )
+            ],
+        )
+        assert calls[0] == (
+            "workspace",
+            "report-metadata",
+            "w1",
+            "--source",
+            "aamini.jj",
+            "--token",
+            "added=+3",
+            "--clear-token",
+            "jj_status",
+            "--clear-token",
+            "removed",
+            "--ttl-ms",
+            "90000",
+        )
 
 
 class StopLoop(Exception):
@@ -389,9 +431,9 @@ class TestRunLoop:
         panes = make_panes(tmp_path)
         token_calls = {str(tmp_path / "a"): 0, str(tmp_path / "b"): 0}
 
-        def counting_token(cwd):
-            token_calls[str(cwd)] += 1
-            return "abc ●"
+        def counting_token(ws):
+            token_calls[ws["cwd"]] += 1
+            return {"jj_status": "abc ●"}
 
         def fake_herdr(*args):
             if args[:2] == ("workspace", "list"):
