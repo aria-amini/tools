@@ -10,6 +10,8 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import herdr as herdr_module
+
 DEFAULT_AGENT = "opencode"
 DEFAULT_SETUP = "fastfetch"
 
@@ -40,3 +42,14 @@ def load(repo_root: Path) -> Layout:
         agent=agent if isinstance(agent, str) else DEFAULT_AGENT,
         setup=setup if isinstance(setup, str) else DEFAULT_SETUP,
     )
+
+
+def apply(left_pane: str, layout: Layout) -> str:
+    """Split a lone pane right and run agent and setup in the halves."""
+    right = herdr_module.herdr(
+        "pane", "split", left_pane, "--direction", "right", "--no-focus"
+    )["pane"]["pane_id"]
+    herdr_module.herdr("pane", "run", left_pane, layout.agent)
+    if layout.setup:
+        herdr_module.herdr("pane", "run", right, layout.setup)
+    return right

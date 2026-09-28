@@ -41,7 +41,6 @@ class SetupCommandTests(unittest.TestCase):
 
         path = Path("/home/u/.herdr/workspaces/dotfiles/plugin")
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(open_module.guard, "arm"),
         ):
@@ -75,7 +74,6 @@ class SetupCommandTests(unittest.TestCase):
         path = Path("/home/u/.herdr/workspaces/dotfiles/plugin")
         project = Path("/src/repo")
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(
                 open_module,
@@ -114,7 +112,6 @@ class SetupCommandTests(unittest.TestCase):
         path = Path("/home/u/.herdr/workspaces/dotfiles/plugin")
         project = Path("/src/repo")
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(
                 open_module, "load_layout", return_value=layout.Layout(setup="")
@@ -206,7 +203,6 @@ class OpenWorkspaceTests(unittest.TestCase):
 
         path = Path("/home/u/.herdr/workspaces/dotfiles/plugin")
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(open_module.guard, "arm") as arm,
         ):
@@ -234,7 +230,6 @@ class OpenWorkspaceTests(unittest.TestCase):
             return {}
 
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(open_module.guard, "arm"),
         ):
@@ -269,7 +264,6 @@ class OpenWorkspaceTests(unittest.TestCase):
             return {}
 
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(open_module.guard, "arm"),
         ):
@@ -296,7 +290,6 @@ class OpenWorkspaceTests(unittest.TestCase):
             return {}
 
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(open_module.guard, "arm"),
         ):
@@ -331,7 +324,6 @@ class OpenWorkspaceTests(unittest.TestCase):
             return {}
 
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(open_module.guard, "arm"),
         ):
@@ -360,7 +352,6 @@ class OpenWorkspaceTests(unittest.TestCase):
 
         path = Path("/home/u/.herdr/workspaces/dotfiles/plugin")
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(open_module.guard, "arm") as arm,
         ):
@@ -405,7 +396,6 @@ class OpenWorkspaceTests(unittest.TestCase):
 
         path = Path("/home/u/.herdr/workspaces/dotfiles/plugin")
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(open_module.guard, "arm") as arm,
         ):
@@ -435,7 +425,6 @@ class OpenWorkspaceTests(unittest.TestCase):
         path = Path("/home/u/.herdr/workspaces/dotfiles/plugin")
         primary = Path("/home/u/dotfiles")
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(open_module.guard, "arm"),
         ):
@@ -482,7 +471,6 @@ class OpenWorkspaceTests(unittest.TestCase):
         path = Path("/home/u/.herdr/workspaces/dotfiles/plugin")
         primary = Path("/home/u/dotfiles")
         with (
-            patch.object(open_module, "herdr", side_effect=fake_herdr),
             patch.object(herdr_module, "herdr", side_effect=fake_herdr),
             patch.object(open_module.guard, "arm"),
         ):

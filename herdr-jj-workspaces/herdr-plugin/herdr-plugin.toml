@@ -68,6 +68,10 @@ on = "worktree.created"
 command = ["./bin/herdr-jj", "adopt"]
 
 [[events]]
+on = "worktree.created"
+command = ["./bin/herdr-jj", "layout"]
+
+[[events]]
 on = "worktree.removed"
 command = ["./bin/herdr-jj", "reap"]
 

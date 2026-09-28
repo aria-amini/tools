@@ -2,8 +2,6 @@ import json
 import os
 from pathlib import Path
 
-import pytest
-
 from herdr_jj import adopt
 from herdr_jj.lib.jj import JjError, JwError, Workspace
 

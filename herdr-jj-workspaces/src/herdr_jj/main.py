@@ -9,6 +9,7 @@ from . import (
     adopt,
     close,
     hunk_pane,
+    layout_hook,
     nest,
     new,
     open,
@@ -40,6 +41,7 @@ def main() -> int:
     reporter.add_parser(subparsers)
     nest.add_parser(subparsers)
     adopt.add_parser(subparsers)
+    layout_hook.add_parser(subparsers)
     hunk_pane.add_parser(subparsers)
     dashboard = subparsers.add_parser(
         "dashboard", help="cross-repository workspace dashboard"

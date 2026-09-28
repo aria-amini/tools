@@ -17,9 +17,9 @@ from .lib.herdr import (
     Workspace,
     ensure_open,
     focus_workspace,
-    herdr,
     workspace_label,
 )
+from .lib.layout import apply as apply_layout
 from .lib.layout import load as load_layout
 
 
@@ -41,14 +41,7 @@ def open_workspace(
         return 0
 
     layout = load_layout(project_path or path)
-    left = created["root_pane"]["pane_id"]
-    right = herdr("pane", "split", left, "--direction", "right", "--no-focus")["pane"][
-        "pane_id"
-    ]
-
-    herdr("pane", "run", left, layout.agent)
-    if layout.setup:
-        herdr("pane", "run", right, layout.setup)
+    apply_layout(created["root_pane"]["pane_id"], layout)
     _arm(workspace_id, path, workspaces)
     focus_workspace(workspace_id)
     return 0
