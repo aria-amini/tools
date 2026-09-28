@@ -13,6 +13,7 @@ from . import (
     new,
     open,
     picker,
+    reap,
     remove,
     reporter,
     wizard,
@@ -35,6 +36,7 @@ def main() -> int:
     wizard.add_parser(subparsers)
     remove.add_parser(subparsers)
     picker.add_parser(subparsers)
+    reap.add_parser(subparsers)
     reporter.add_parser(subparsers)
     nest.add_parser(subparsers)
     adopt.add_parser(subparsers)

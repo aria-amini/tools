@@ -5,6 +5,13 @@ Use `prefix+shift+g` for the existing jj-waltz create action.
 
 ## Model
 
+Removal runs through two paths that both delete the workspace bookmark.
+The jj remove action (`prefix+d`) confirms, then runs `jw remove --delete-bookmark`.
+herdr's worktree remove (`prefix+shift+d`) fires `worktree.removed`;
+the reap hook forgets the jj workspace, deletes the bookmark, and removes
+herdr's `worktree/<slug>` branch. The adopt hook records a checkout-to-name
+ledger, because jj hides a workspace root once its directory is gone.
+
 Each row is one jj workspace with all of its agents, identified by checkout path.
 The primary checkout displays as `default` under its repository heading.
 In activity order, the primary checkout uses the repository name; other workspaces use `repo/name`.

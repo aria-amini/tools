@@ -13,7 +13,8 @@ import sys
 from collections.abc import Mapping
 from pathlib import Path
 
-from .lib.jj import JjError, JwError, jw, workspaces, jj
+from . import state
+from .lib.jj import JjError, JwError, jj, jw, workspaces
 
 TRUNK_CANDIDATES = ("trunk()", "main@origin", "main", "master@origin", "master")
 
@@ -125,6 +126,12 @@ def run(args: argparse.Namespace) -> int:
         return 1
     if name is None:
         return 0
+    found = git_worktree(path)
+    if found is not None:
+        primary, _ = found
+        entries = state.read_ledger()
+        entries[str(path.resolve())] = {"name": name, "repo": str(primary)}
+        state.write_ledger(entries)
     print(f"adopted {name} at {path}")
     return 0
 

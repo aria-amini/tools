@@ -52,7 +52,7 @@ class SetupCommandTests(unittest.TestCase):
             run_calls,
             [
                 ("pane", "run", "p1", "opencode"),
-                ("pane", "run", "p2", "mise run setup"),
+                ("pane", "run", "p2", layout.DEFAULT_SETUP),
             ],
         )
 
@@ -381,7 +381,7 @@ class OpenWorkspaceTests(unittest.TestCase):
                 ),
                 ("pane", "split", "p1", "--direction", "right", "--no-focus"),
                 ("pane", "run", "p1", "opencode"),
-                ("pane", "run", "p2", "mise run setup"),
+                ("pane", "run", "p2", layout.DEFAULT_SETUP),
                 ("workspace", "focus", "w9"),
             ],
         )
@@ -411,8 +411,8 @@ class OpenWorkspaceTests(unittest.TestCase):
         ):
             self.assertEqual(open_module.open_workspace(path), 0)
 
-        self.assertIn(("pane", "run", "p2", "mise run setup"), calls)
-        self.assertNotIn(("pane", "run", "p1", "mise run setup"), calls)
+        self.assertIn(("pane", "run", "p2", layout.DEFAULT_SETUP), calls)
+        self.assertNotIn(("pane", "run", "p1", layout.DEFAULT_SETUP), calls)
         arm.assert_called_once_with("w9", path, {"w9"})
 
     def test_opens_via_worktree_open_when_project_path_given(self):

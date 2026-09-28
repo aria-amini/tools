@@ -1,6 +1,6 @@
 [project]
 name = "herdr-jj"
-version = "0.8.0"
+version = "0.8.1"
 description = "herdr integration for jw-managed jj workspaces: open/close, picker, wizard, plugin commands"
 requires-python = ">=3.11"
 dependencies = [

@@ -22,6 +22,29 @@ def context_path(env: Mapping[str, str] | None = None) -> Path:
     return state_dir(env) / "picker-context.json"
 
 
+def ledger_path(env: Mapping[str, str] | None = None) -> Path:
+    """Adopted-checkout ledger: resolved path -> {name, repo}.
+
+    jj drops a workspace's root from its templates once the directory is
+    gone, so removal-time hooks cannot map a deleted path back to a name.
+    The adopt hook records the mapping while the directory exists.
+    """
+    return state_dir(env) / "adopted-worktrees.json"
+
+
+def read_ledger(env: Mapping[str, str] | None = None) -> dict:
+    try:
+        return json.loads(ledger_path(env).read_text())
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+
+
+def write_ledger(entries: dict, env: Mapping[str, str] | None = None) -> None:
+    path = ledger_path(env)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(entries))
+
+
 def read_context(env: Mapping[str, str] | None = None) -> dict | None:
     try:
         return json.loads(context_path(env).read_text())

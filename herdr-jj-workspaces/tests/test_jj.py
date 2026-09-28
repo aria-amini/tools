@@ -130,20 +130,11 @@ class TestWorkspaces:
 
 
 class TestWorkspaceNames:
-    def test_uses_template(self):
-        output = "default\t/repo\nfeat\t/workspaces/feat\n"
+    def test_parses_default_output(self):
+        output = "default: kxyzqptm first\nfeat: abcdefgh (empty) second\n"
         with patch.object(jj_module, "jj", return_value=output) as mock_jj:
             assert jj_module.workspace_names(Path("/repo")) == ["default", "feat"]
-        assert mock_jj.call_args.args[:3] == ("workspace", "list", "-T")
-
-    def test_falls_back_to_parsing_default_output(self):
-        def fake_jj(*args, cwd=None):
-            if "-T" in args:
-                raise JjError("template error: no such keyword")
-            return "default: kxyzqptm first\nfeat: abcdefgh (empty) second\n"
-
-        with patch.object(jj_module, "jj", side_effect=fake_jj):
-            assert jj_module.workspace_names(Path("/repo")) == ["default", "feat"]
+        assert mock_jj.call_args.args[:2] == ("workspace", "list")
 
 
 class TestForgetWorkspace:

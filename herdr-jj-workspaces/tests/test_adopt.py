@@ -169,6 +169,26 @@ def test_run_skips_missing_path_quietly(monkeypatch):
     assert adopt.run(None) == 0
 
 
+def test_run_records_ledger_on_success(monkeypatch, tmp_path):
+    from herdr_jj import state
+
+    path = tmp_path / "wt"
+    primary = tmp_path / "repo"
+    make_git_worktree(path, primary, "feature")
+    write_event(
+        monkeypatch, {"worktree": {"checkout_path": str(path), "branch": "feature"}}
+    )
+    monkeypatch.setenv("HERDR_PLUGIN_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setattr(adopt, "workspaces", lambda cwd: [])
+    monkeypatch.setattr(adopt, "jj", lambda *a, **k: "")
+    monkeypatch.setattr(adopt, "jw", lambda *a, **k: "")
+
+    assert adopt.run(None) == 0
+    assert state.read_ledger() == {
+        str(path.resolve()): {"name": "feature", "repo": str(primary)}
+    }
+
+
 def test_run_reports_missing_checkout_path(monkeypatch, capsys):
     write_event(monkeypatch, {"unexpected": True})
     assert adopt.run(None) == 0

@@ -43,6 +43,9 @@ name = args[1] if len(args) > 1 else ""
 cwd = os.getcwd()
 root = cwd + "." + name
 
+if cmd == "remove" and os.environ.get("JW_FAIL_REMOVE"):
+    sys.exit(1)
+
 
 def jj(*a):
     subprocess.run(["jj", *a], check=True, capture_output=True)

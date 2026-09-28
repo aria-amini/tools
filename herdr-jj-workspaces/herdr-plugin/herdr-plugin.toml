@@ -1,6 +1,6 @@
 id = "aamini.jj"
 name = "jj workspaces"
-version = "0.8.0"
+version = "0.8.1"
 min_herdr_version = "0.8.2"
 description = "jw-backed jj workspaces: create, remove, pick, sidebar status."
 platforms = ["linux", "macos"]
@@ -66,6 +66,10 @@ command = ["./bin/herdr-jj", "nest"]
 [[events]]
 on = "worktree.created"
 command = ["./bin/herdr-jj", "adopt"]
+
+[[events]]
+on = "worktree.removed"
+command = ["./bin/herdr-jj", "reap"]
 
 [[events]]
 on = "workspace.closed"

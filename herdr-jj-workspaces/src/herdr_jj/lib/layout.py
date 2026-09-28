@@ -1,8 +1,8 @@
 """Per-repo workspace layout from the repository's .herdr.toml.
 
 [layout]
-agent = "opencode"          # left pane command
-setup = "mise run setup"    # right pane command; "" disables
+agent = "opencode"  # left pane command
+setup = "fastfetch" # right pane command; "" disables
 """
 
 import sys
@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_AGENT = "opencode"
-DEFAULT_SETUP = "mise run setup"
+DEFAULT_SETUP = "fastfetch"
 
 
 @dataclass(frozen=True)

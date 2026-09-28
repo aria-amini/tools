@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from herdr_jj import state
+
 from .conftest import jj, read_log, run_plugin, write_scenario
 
 pytestmark = [
@@ -116,6 +118,70 @@ class TestRemoveFlow:
         assert "default" in jj(jj_repo, "workspace", "list")
         assert jj_repo.is_dir()
         assert ["workspace", "close", "w1"] not in read_log(tmp_path)
+
+
+class TestReapFlow:
+    @staticmethod
+    def removed_event(repo: Path, checkout: Path) -> str:
+        payload = {
+            "workspace_id": "w1",
+            "forced": True,
+            "workspace": {
+                "worktree": {
+                    "checkout_path": str(checkout),
+                    "repo_root": str(repo),
+                }
+            },
+            "worktree": {"path": str(checkout)},
+        }
+        return json.dumps({"data": payload})
+
+    def test_reap_forgets_workspace_and_bookmark(self, tmp_path, jj_repo, plugin_env):
+        checkout = add_workspace(jj_repo, tmp_path, "feat")
+        jj(checkout, "bookmark", "set", "feat", "-r", "@")
+        # herdr removed the checkout directory before the event fired.
+        shutil.rmtree(checkout)
+        env = plugin_env(
+            JW_FAIL_REMOVE="1",
+            HERDR_PLUGIN_EVENT_JSON=self.removed_event(jj_repo, checkout),
+        )
+        # adopt recorded the mapping while the directory existed
+        state.write_ledger(
+            {str(checkout.resolve()): {"name": "feat", "repo": str(jj_repo)}},
+            env,
+        )
+        result = run_plugin(env, "reap", cwd=jj_repo)
+
+        assert result.returncode == 0, result.stderr
+        assert "feat" not in jj(jj_repo, "workspace", "list")
+        assert "feat" not in jj(jj_repo, "bookmark", "list")
+
+    def test_reap_uses_jw_when_it_succeeds(self, tmp_path, jj_repo, plugin_env):
+        checkout = add_workspace(jj_repo, tmp_path, "feat")
+        jj(checkout, "bookmark", "set", "feat", "-r", "@")
+        shutil.rmtree(checkout)
+        env = plugin_env(HERDR_PLUGIN_EVENT_JSON=self.removed_event(jj_repo, checkout))
+        state.write_ledger(
+            {str(checkout.resolve()): {"name": "feat", "repo": str(jj_repo)}},
+            env,
+        )
+        result = run_plugin(env, "reap", cwd=jj_repo)
+
+        assert result.returncode == 0, result.stderr
+        assert "feat" not in jj(jj_repo, "workspace", "list")
+
+    def test_reap_ignores_plain_git_worktree(self, tmp_path, plugin_env):
+        git_repo = tmp_path / "gitrepo"
+        subprocess.run(["git", "init", "-q", str(git_repo)], check=True)
+        payload = {
+            "workspace": {"worktree": {"repo_root": str(git_repo)}},
+            "worktree": {"path": str(git_repo / ".wt")},
+        }
+        env = plugin_env(HERDR_PLUGIN_EVENT_JSON=json.dumps({"data": payload}))
+
+        result = run_plugin(env, "reap", cwd=git_repo)
+
+        assert result.returncode == 0, result.stderr
 
 
 class TestPickerFlow:

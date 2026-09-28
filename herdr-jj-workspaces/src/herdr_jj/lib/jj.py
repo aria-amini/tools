@@ -118,13 +118,10 @@ def current_workspace(cwd: Path) -> Workspace:
 
 
 def workspace_names(cwd: Path) -> list[str]:
-    try:
-        return [item.name for item in workspaces(cwd)]
-    except JjError:
-        out = jj("workspace", "list", cwd=cwd)
-        return [
-            line.split(":", 1)[0].strip() for line in out.splitlines() if line.strip()
-        ]
+    """Names only, from the default listing: a gone directory keeps its name,
+    while the root template returns nothing for it."""
+    out = jj("workspace", "list", cwd=cwd)
+    return [line.split(":", 1)[0].strip() for line in out.splitlines() if line.strip()]
 
 
 def forget_workspace(name: str, cwd: Path) -> None:
@@ -150,6 +147,15 @@ def _prune_git_worktrees(name: str, primary: Path) -> None:
         capture_output=True,
         check=False,
     )
+
+
+def delete_bookmark(name: str, cwd: Path) -> None:
+    """Delete a local bookmark; a missing bookmark stays silent."""
+    try:
+        jj("log", "--no-graph", "-r", name, "-T", "", cwd=cwd)
+    except JjError:
+        return
+    jj("bookmark", "delete", name, cwd=cwd)
 
 
 def commit_id(revset: str, cwd: Path) -> str:

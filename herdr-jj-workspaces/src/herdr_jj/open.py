@@ -3,7 +3,7 @@
 Invoked by herdr-jj with the workspace path. If a herdr workspace labeled with
 the jj workspace name already exists it is focused; otherwise it is created
 with a vertical split: the left pane runs the layout agent and the right pane
-runs the layout setup command. Both default to opencode and `mise run setup`
+runs the layout setup command. Both default to opencode and `fastfetch`
 and can be overridden per repository in .herdr.toml (see lib.layout).
 """
 
