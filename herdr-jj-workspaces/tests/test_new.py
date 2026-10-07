@@ -32,7 +32,7 @@ class NewWorkspaceTests(unittest.TestCase):
 
         self.assertEqual(rc, 0)
         run.assert_any_call(
-            ["jw", "add", "feature", "--at", "trunk()"],
+            ["jw", "add", "feature", "--no-bookmark", "--at", "trunk()"],
             cwd=Path("/w/repo"),
             text=True,
             capture_output=True,
@@ -62,7 +62,10 @@ class NewWorkspaceTests(unittest.TestCase):
                 new_module.new_workspace("feature", None, Path("/w/repo")), 0
             )
 
-        self.assertEqual(run.call_args_list[0].args[0], ["jw", "add", "feature"])
+        self.assertEqual(
+            run.call_args_list[0].args[0],
+            ["jw", "add", "feature", "--no-bookmark"],
+        )
 
     def test_existing_workspace_still_opens(self):
         with (

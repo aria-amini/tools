@@ -977,7 +977,16 @@ class Dashboard(App):
 
             def create():
                 target = single(repo, rev)
-                command("jw", "add", name, "--at", target, cwd=repo, timeout=120)
+                command(
+                    "jw",
+                    "add",
+                    name,
+                    "--no-bookmark",
+                    "--at",
+                    target,
+                    cwd=repo,
+                    timeout=120,
+                )
 
             await self.perform(create)
             self.status(f"Created {name}; select it and press Enter to open")

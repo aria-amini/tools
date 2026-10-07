@@ -76,19 +76,23 @@ class TestJwAdd:
     def test_defaults_to_at_working_copy(self):
         with patch.object(jj_module, "jw", return_value="") as mock_jw:
             jj_module.jw_add("feat", cwd=Path("/repo"))
-        mock_jw.assert_called_once_with("add", "feat", "--at", "@", cwd=Path("/repo"))
+        mock_jw.assert_called_once_with(
+            "add", "feat", "--no-bookmark", "--at", "@", cwd=Path("/repo")
+        )
 
     def test_at_override(self):
         with patch.object(jj_module, "jw", return_value="") as mock_jw:
             jj_module.jw_add("feat", cwd=Path("/repo"), at="trunk()")
         mock_jw.assert_called_once_with(
-            "add", "feat", "--at", "trunk()", cwd=Path("/repo")
+            "add", "feat", "--no-bookmark", "--at", "trunk()", cwd=Path("/repo")
         )
 
     def test_at_none_omits_flag(self):
         with patch.object(jj_module, "jw", return_value="") as mock_jw:
             jj_module.jw_add("feat", cwd=Path("/repo"), at=None)
-        mock_jw.assert_called_once_with("add", "feat", cwd=Path("/repo"))
+        mock_jw.assert_called_once_with(
+            "add", "feat", "--no-bookmark", cwd=Path("/repo")
+        )
 
 
 class TestJwRemove:

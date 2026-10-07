@@ -19,7 +19,9 @@ def _jw(project: Path, *args: str) -> subprocess.CompletedProcess:
 
 
 def new_workspace(name: str, at: str | None, project: Path) -> int:
-    add_args = ["add", name] if at is None else ["add", name, "--at", at]
+    add_args = ["add", name, "--no-bookmark"]
+    if at is not None:
+        add_args.extend(["--at", at])
     added = _jw(project, *add_args)
     resolved = _jw(project, "path", name)
     if added.returncode and resolved.returncode:

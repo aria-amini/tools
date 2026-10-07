@@ -42,8 +42,8 @@ def jw(*args: str, cwd: Path | None = None) -> str:
 
 
 def jw_add(name: str, cwd: Path, at: str | None = "@") -> None:
-    """Create a jw-managed workspace; jw owns paths, links, and bookmarks."""
-    args = ["add", name]
+    """Create a jw-managed workspace without a bookmark."""
+    args = ["add", name, "--no-bookmark"]
     if at is not None:
         args.extend(["--at", at])
     jw(*args, cwd=cwd)
