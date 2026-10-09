@@ -14,6 +14,7 @@ from . import (
     new,
     open,
     picker,
+    pitchfork_cleanup,
     reap,
     remove,
     reporter,
@@ -38,6 +39,7 @@ def main() -> int:
     remove.add_parser(subparsers)
     picker.add_parser(subparsers)
     reap.add_parser(subparsers)
+    pitchfork_cleanup.add_parser(subparsers)
     reporter.add_parser(subparsers)
     nest.add_parser(subparsers)
     adopt.add_parser(subparsers)

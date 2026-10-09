@@ -76,5 +76,9 @@ on = "worktree.removed"
 command = ["./bin/herdr-jj", "reap"]
 
 [[events]]
+on = "worktree.removed"
+command = ["./bin/herdr-jj", "pitchfork-cleanup"]
+
+[[events]]
 on = "workspace.closed"
 command = ["./bin/herdr-jj", "reporter", "refresh-once"]
