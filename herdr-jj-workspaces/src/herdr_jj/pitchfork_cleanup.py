@@ -11,6 +11,10 @@ from pathlib import Path
 from .adopt import checkout_path, event_payload
 
 
+class CleanupError(RuntimeError):
+    pass
+
+
 def load(path: Path) -> dict:
     try:
         with path.open("rb") as file:
@@ -41,14 +45,18 @@ def cleanup_checkout(checkout: Path) -> None:
     state_home = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state"))
     state_dir = Path(os.environ.get("PITCHFORK_STATE_DIR", state_home / "pitchfork"))
     state = load(state_dir / "state.toml")
+    failures = []
     for daemon_id, daemon in state.get("daemons", {}).items():
         if daemon_id.startswith("global/") or not belongs_to(
             daemon.get("dir"), checkout
         ):
             continue
-        if daemon.get("pid"):
-            pitchfork("stop", daemon_id)
-        pitchfork("clean", "--prune", "--daemon", daemon_id)
+        try:
+            if daemon.get("pid"):
+                pitchfork("stop", daemon_id)
+            pitchfork("clean", "--prune", "--daemon", daemon_id)
+        except (OSError, subprocess.CalledProcessError) as error:
+            failures.append(f"{daemon_id}: {error}")
 
     config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
     config = load(config_home / "pitchfork/config.toml")
@@ -58,7 +66,12 @@ def cleanup_checkout(checkout: Path) -> None:
             "dir"
         )
         if belongs_to(directory, checkout):
-            pitchfork("proxy", "remove", slug)
+            try:
+                pitchfork("proxy", "remove", slug)
+            except (OSError, subprocess.CalledProcessError) as error:
+                failures.append(f"slug {slug}: {error}")
+    if failures:
+        raise CleanupError("; ".join(failures))
 
 
 def run(args: argparse.Namespace) -> int:
@@ -67,7 +80,12 @@ def run(args: argparse.Namespace) -> int:
         return 0
     try:
         cleanup_checkout(checkout)
-    except (OSError, subprocess.CalledProcessError, tomllib.TOMLDecodeError) as error:
+    except (
+        CleanupError,
+        OSError,
+        subprocess.CalledProcessError,
+        tomllib.TOMLDecodeError,
+    ) as error:
         print(f"herdr-jj pitchfork-cleanup: {error}", file=sys.stderr)
         return 1
     return 0

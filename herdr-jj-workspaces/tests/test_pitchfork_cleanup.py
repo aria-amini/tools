@@ -1,8 +1,12 @@
 import argparse
 import json
+import os
+import shutil
+import subprocess
 import tomllib
 from pathlib import Path
 
+import pytest
 from herdr_jj import pitchfork_cleanup
 
 
@@ -77,3 +81,88 @@ def test_plugin_registers_cleanup_on_removal():
         "on": "worktree.removed",
         "command": ["./bin/herdr-jj", "pitchfork-cleanup"],
     } in config["events"]
+
+
+def test_failed_stop_does_not_skip_other_targets(monkeypatch, tmp_path):
+    checkout = tmp_path / "removed"
+    calls = []
+    monkeypatch.setattr(
+        pitchfork_cleanup,
+        "load",
+        lambda path: {
+            "daemons": {
+                "app/broken": {"dir": str(checkout), "pid": 123},
+                "app/healthy": {"dir": str(checkout), "pid": 456},
+            },
+            "slugs": {"app": {"dir": str(checkout)}},
+        },
+    )
+
+    def command(args, **kwargs):
+        calls.append(args)
+        if args == ["pitchfork", "stop", "app/broken"]:
+            raise subprocess.CalledProcessError(1, args)
+
+    monkeypatch.setattr(pitchfork_cleanup.subprocess, "run", command)
+    with pytest.raises(pitchfork_cleanup.CleanupError, match="app/broken"):
+        pitchfork_cleanup.cleanup_checkout(checkout)
+    assert calls == [
+        ["pitchfork", "stop", "app/broken"],
+        ["pitchfork", "stop", "app/healthy"],
+        ["pitchfork", "clean", "--prune", "--daemon", "app/healthy"],
+        ["pitchfork", "proxy", "remove", "app"],
+    ]
+
+
+@pytest.mark.skipif(
+    os.name != "posix" or shutil.which("pitchfork") is None,
+    reason="Pitchfork and a POSIX host are required",
+)
+def test_real_pitchfork_removes_daemon_and_slug(monkeypatch, tmp_path):
+    home = tmp_path / "home"
+    checkout = tmp_path / "app"
+    home.mkdir()
+    checkout.mkdir()
+    env = {
+        "PATH": os.environ["PATH"],
+        "HOME": str(home),
+        "XDG_CONFIG_HOME": str(home / ".config"),
+        "XDG_STATE_HOME": str(home / ".local/state"),
+        "PITCHFORK_STATE_DIR": str(tmp_path / "pitchfork-state"),
+        "PITCHFORK_PROXY_ENABLE": "false",
+        "PITCHFORK_PROXY_AUTO_TRUST": "false",
+    }
+    for key in list(os.environ):
+        monkeypatch.delenv(key)
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    config = checkout / "pitchfork.toml"
+    config.write_text('[daemons.dev]\nrun = "exec sleep 600"\nready_delay = 0\n')
+
+    def command(*args, cwd=home):
+        return subprocess.run(
+            ["pitchfork", *args],
+            cwd=cwd,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+
+    try:
+        command("proxy", "add", "app", "--daemon", "dev", "--dir", str(checkout))
+        command("start", "dev", cwd=checkout)
+        state = Path(env["PITCHFORK_STATE_DIR"]) / "state.toml"
+        assert pitchfork_cleanup.load(state)["daemons"]["app/dev"]["pid"]
+        config.unlink()
+        checkout.rmdir()
+
+        pitchfork_cleanup.cleanup_checkout(checkout)
+
+        assert "app/dev" not in pitchfork_cleanup.load(state).get("daemons", {})
+        global_config = Path(env["XDG_CONFIG_HOME"]) / "pitchfork/config.toml"
+        assert "app" not in pitchfork_cleanup.load(global_config).get("slugs", {})
+    finally:
+        command("stop", "--all")
+        command("supervisor", "stop")
